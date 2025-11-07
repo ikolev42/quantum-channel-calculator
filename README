@@ -1,0 +1,32 @@
+# Channel Capacity Calculator
+
+**Interactive web app for classical & quantum channel capacities.**
+
+Try it now: https://quantum-channel-calculator.streamlit.app
+
+---
+
+## Features
+- Classical: BSC, BEC  
+- Quantum: Bit-flip, Phase-flip, Depolarizing, Amplitude Damping  
+- Visual density matrices, graphs, random examples  
+- **No installation – works in browser!**
+
+## How to Use
+1. Open: https://quantum-channel-calculator.streamlit.app  
+2. Switch mode, select channel, adjust parameters  
+3. Click **Generate Random** or **Calculate**  
+4. See **Rate R**, **Capacity C**, and **graphs**
+
+## Pro Version ($9.99)
+- Export to PDF/PNG  
+- Dark mode  
+- Save/load configurations  
+[Buy on Gumroad](https://gumroad.com/l/channelcalc-pro)
+
+## Local Run (optional, for developers)
+```bash
+git clone https://github.com/yourname/channel-capacity-calculator
+cd channel-capacity-calculator
+pip install -r requirements.txt
+streamlit run app.py
