@@ -23,14 +23,12 @@ classical_channels = {
     'Binary Symmetric': {
         'param': 'α', 'range': [0.0, 0.5], 'formula': 'C = 1 - H(α)',
         'capacity': lambda a: 1 - h(a),
-        'achievable': lambda lam, a: h(lam + a - 2*a*lam) - h(a),
-        'desc': 'Bit flipped with probability α.'
+        'achievable': lambda lam, a: h(lam + a - 2*a*lam) - h(a)
     },
     'Binary Erasure': {
         'param': 'α', 'range': [0.0, 1.0], 'formula': 'C = 1 - α',
         'capacity': lambda a: 1 - a,
-        'achievable': lambda lam, a: -sum(p*np.log2(p) for p in [lam*(1-a), (1-lam)*(1-a), a] if p > 0),
-        'desc': 'Bit erased with probability α.'
+        'achievable': lambda lam, a: -sum(p*np.log2(p) for p in [lam*(1-a), (1-lam)*(1-a), a] if p > 0)
     }
 }
 
@@ -41,14 +39,12 @@ quantum_channels = {
             entropy((1-p)*(l*rho1 + (1-l)*rho2) + p*(X@(l*rho1 + (1-l)*rho2)@X.conj().T))
             - l*entropy((1-p)*rho1 + p*(X@rho1@X.conj().T))
             - (1-l)*entropy((1-p)*rho2 + p*(X@rho2@X.conj().T))
-        ),
-        'desc': 'Qubit flipped with probability p.'
+        )
     },
     'Phase-flip': {
         'param': 'p', 'range': [0.0, 0.5], 'formula': 'C = H(λ)',
         'capacity': lambda p: 1.0,
-        'achievable': lambda lam, p: h(lam),
-        'desc': 'Phase flipped with probability p.'
+        'achievable': lambda lam, p: h(lam)
     }
 }
 
@@ -70,8 +66,7 @@ param = st.sidebar.slider(
 # --- Input State ---
 if mode == "Classical":
     st.sidebar.markdown("**P(X=0) = λ**")
-    lambda_input = st.sidebar.slider("λ", 0.0, 1.0, 0.5, 0.01)
-    # 4 boxes
+    lambda_input = st.sidebar.slider("λ", 0.0, 1.0, 0.5, 0.01, key="lambda_classical")
     col1, col2 = st.sidebar.columns(2)
     with col1:
         a = st.number_input("P(0|0)", 0.0, 1.0, 0.5, 0.01, key="a_classical")
@@ -79,12 +74,9 @@ if mode == "Classical":
     with col2:
         st.write(f"**1-a = {1-a:.4f}**")
         st.write(f"**a = {a:.4f}**")
-
 else:
     st.sidebar.markdown("**ρ = λ ρ₁ + (1-λ) ρ₂**")
     lambda_input = st.sidebar.slider("λ", 0.0, 1.0, 0.5, 0.01, key="lambda_quantum")
-    
-    # 8 boxes
     col1, col2 = st.sidebar.columns(2)
     with col1:
         a = st.number_input("ρ₁[0,0]", 0.0, 1.0, 0.5, 0.01, key="a1")
@@ -105,32 +97,46 @@ col1, col2 = st.sidebar.columns(2)
 with col1:
     if st.button("Generate Random"):
         if mode == "Classical":
-            st.session_state.a_classical = round(random.uniform(0.2, 0.8), 4)
+            st.experimental_set_query_params(random_classical=round(random.uniform(0.2, 0.8), 4))
         else:
-            st.session_state.lambda_quantum = round(random.uniform(0.2, 0.8), 4)
-            st.session_state.a1 = round(random.uniform(0.2, 0.8), 4)
-            st.session_state.a2 = round(1 - st.session_state.a1, 4)
-            max_coh = np.sqrt(st.session_state.a1 * st.session_state.a2)
-            st.session_state.c_re = round(random.uniform(-max_coh, max_coh), 4)
-            st.session_state.c_im = round(random.uniform(-max_coh, max_coh), 4)
-            st.session_state.e_re = round(random.uniform(-max_coh, max_coh), 4)
-            st.session_state.e_im = round(random.uniform(-max_coh, max_coh), 4)
+            l = round(random.uniform(0.2, 0.8), 4)
+            a_val = round(random.uniform(0.2, 0.8), 4)
+            b_val = round(1 - a_val, 4)
+            max_coh = np.sqrt(a_val * b_val)
+            st.experimental_set_query_params(
+                random_quantum=l,
+                a1=a_val, a2=b_val,
+                c_re=round(random.uniform(-max_coh, max_coh), 4),
+                c_im=round(random.uniform(-max_coh, max_coh), 4),
+                e_re=round(random.uniform(-max_coh, max_coh), 4),
+                e_im=round(random.uniform(-max_coh, max_coh), 4)
+            )
         st.rerun()
 
 with col2:
-    calculate_trigger = st.button("Calculate")
+    if st.button("Calculate"):
+        st.rerun()
 
-# --- Main ---
+# --- Load from URL ---
+query_params = st.experimental_get_query_params()
+if mode == "Classical" and "random_classical" in query_params:
+    lambda_input = float(query_params["random_classical"][0])
+    st.experimental_set_query_params()  # clear
+elif mode == "Quantum" and "random_quantum" in query_params:
+    lambda_input = float(query_params["random_quantum"][0])
+    st.experimental_set_query_params()  # clear
+
+# --- Main Calculation ---
 st.markdown(f"### {channel_name}")
 st.latex(channel['formula'])
 
 try:
     if mode == "Classical":
-        lam = st.session_state.get('a_classical', 0.5)
+        lam = lambda_input
         rate = channel['achievable'](lam, param)
         cap = channel.get('capacity', lambda x: 0)(param)
     else:
-        lam = st.session_state.get('lambda_quantum', 0.5)
+        lam = lambda_input
         if channel_name == "Bit-flip":
             rate = channel['achievable'](rho1, rho2, lam, param)
             cap = max([channel['achievable'](rho1, rho2, ll, param) for ll in np.linspace(0,1,20)])
