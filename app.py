@@ -24,12 +24,12 @@ def entropy(rho):
 # --- Channels ---
 classical_channels = {
     'Binary Symmetric': {
-        'param': 'α', 'range': [0, 0.5], 'formula': 'C = 1 - H(α)',
+        'param': 'α', 'range': [0.0, 0.5], 'formula': 'C = 1 - H(α)',
         'capacity': lambda a: 1 - h(a),
         'achievable': lambda lam, a: h(lam + a - 2*a*lam) - h(a)
     },
     'Binary Erasure': {
-        'param': 'α', 'range': [0, 1], 'formula': 'C = 1 - α',
+        'param': 'α', 'range': [0.0, 1.0], 'formula': 'C = 1 - α',
         'capacity': lambda a: 1 - a,
         'achievable': lambda lam, a: -sum(p*np.log2(p) for p in [lam*(1-a), (1-lam)*(1-a), a] if p > 0)
     }
@@ -37,7 +37,7 @@ classical_channels = {
 
 quantum_channels = {
     'Bit-flip': {
-        'param': 'p', 'range': [0, 0.5], 'formula': 'R = H(ρ) - λH(ρ₁) - (1-λ)H(ρ₂)',
+        'param': 'p', 'range': [0.0, 0.5], 'formula': 'R = H(ρ) - λH(ρ₁) - (1-λ)H(ρ₂)',
         'achievable': lambda rho1, rho2, l, p: (
             entropy((1-p)*(l*rho1 + (1-l)*rho2) + p*(X@(l*rho1 + (1-l)*rho2)@X.conj().T))
             - l*entropy((1-p)*rho1 + p*(X@rho1@X.conj().T))
@@ -45,17 +45,17 @@ quantum_channels = {
         )
     },
     'Phase-flip': {
-        'param': 'p', 'range': [0, 0.5], 'formula': 'C = H(λ)',
+        'param': 'p', 'range': [0.0, 0.5], 'formula': 'C = H(λ)',
         'capacity': lambda p: 1.0,
         'achievable': lambda lam, p: h(lam)
     },
     'Depolarizing': {
-        'param': 'p', 'range': [0, 1], 'formula': 'C = 1 - H(p/2) - p log₂(3)/2',
+        'param': 'p', 'range': [0.0, 1.0], 'formula': 'C = 1 - H(p/2) - p log₂(3)/2',
         'capacity': lambda p: 1 - h(p / 2) - p * np.log2(3)/2,
         'achievable': lambda lam, p: h((1 - p) * lam + p / 2) - h(p / 2)
     },
     'Amplitude Damping': {
-        'param': 'γ', 'range': [0, 1], 'formula': 'C = H(λ + (1-λ)γ) - (1-λ)H(γ)',
+        'param': 'γ', 'range': [0.0, 1.0], 'formula': 'C = H(λ + (1-λ)γ) - (1-λ)H(γ)',
         'achievable': lambda lam, gamma: h(lam + (1 - lam) * gamma) - (1 - lam) * h(gamma)
     }
 }
@@ -67,10 +67,14 @@ channels = classical_channels if mode == "Classical" else quantum_channels
 channel_name = st.sidebar.selectbox("Channel", list(channels.keys()))
 channel = channels[channel_name]
 
-param = st.sidebar.slider(f"{channel['param']}", 
-                          min_value=channel['range'][0], 
-                          max_value=channel['range'][1], 
-                          value=0.1, step=0.01)
+# ПОПРАВКА: float() за min/max
+param = st.sidebar.slider(
+    f"{channel['param']}",
+    min_value=float(channel['range'][0]),
+    max_value=float(channel['range'][1]),
+    value=0.1,
+    step=0.01
+)
 
 if mode == "Classical":
     lambda_input = st.sidebar.slider("λ", 0.0, 1.0, 0.5, 0.01)
