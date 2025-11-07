@@ -18,7 +18,7 @@ def entropy(rho):
     eigvals = eigvals[eigvals > 1e-12]
     return -np.sum(eigvals * np.log2(eigvals)).real if len(eigvals) > 0 else 0.0
 
-# --- All Channels (4 Quantum + 2 Classical) ---
+# --- All Channels ---
 classical_channels = {
     'Binary Symmetric': {
         'param': 'α', 'range': [0.0, 0.5], 'formula': 'C = 1 - H(α)',
@@ -63,7 +63,7 @@ quantum_channels = {
     }
 }
 
-# === APP OVERVIEW (ТОП ПОЛЕ) ===
+# === APP OVERVIEW ===
 st.markdown("""
 ## App Overview
 This tool calculates **classical and quantum channel capacities** interactively.
@@ -74,7 +74,7 @@ This tool calculates **classical and quantum channel capacities** interactively.
 3. **Parameter**: Adjust noise (α, p, γ).
 4. **Input State**: 
    - **Classical**: λ = P(X=0), 4-box matrix shows transition probabilities.
-   - **Quantum**: λ, ρ₁, ρ₂ → 8 input fields (a, Re(c), Im(c), d, b, Re(e), Im(e), f).
+   - **Quantum**: λ, ρ₁, ρ₂ → 8 input fields (a, Re(c), Im(c), Re(d), Im(d), b, Re(e), Im(e), Re(f), Im(f)).
 5. **Buttons**: 
    - **Generate Random**: Fills valid random values.
    - **Calculate**: Updates rate and graphs.
@@ -144,29 +144,41 @@ col1, col2 = st.sidebar.columns(2)
 with col1:
     if st.button("Generate Random"):
         if mode == "Classical":
-            st.session_state.lam_class = round(random.uniform(0.2, 0.8), 4)
-            st.session_state.a_class = round(random.uniform(0.2, 0.8), 4)
+            st.experimental_set_query_params(
+                lam_class=round(random.uniform(0.2, 0.8), 4),
+                a_class=round(random.uniform(0.2, 0.8), 4)
+            )
         else:
-            st.session_state.lam_quant = round(random.uniform(0.2, 0.8), 4)
+            l = round(random.uniform(0.2, 0.8), 4)
             a_val = round(random.uniform(0.2, 0.8), 4)
             b_val = round(1 - a_val, 4)
             max_coh = np.sqrt(a_val * b_val)
-            st.session_state.update({
-                'a1': a_val, 'a2': b_val,
-                'c_re': round(random.uniform(-max_coh, max_coh), 4),
-                'c_im': round(random.uniform(-max_coh, max_coh), 4),
-                'd_re': round(random.uniform(-max_coh, max_coh), 4),
-                'd_im': round(random.uniform(-max_coh, max_coh), 4),
-                'e_re': round(random.uniform(-max_coh, max_coh), 4),
-                'e_im': round(random.uniform(-max_coh, max_coh), 4),
-                'f_re': round(random.uniform(-max_coh, max_coh), 4),
-                'f_im': round(random.uniform(-max_coh, max_coh), 4)
-            })
+            st.experimental_set_query_params(
+                lam_quant=l,
+                a1=a_val, a2=b_val,
+                c_re=round(random.uniform(-max_coh, max_coh), 4),
+                c_im=round(random.uniform(-max_coh, max_coh), 4),
+                d_re=round(random.uniform(-max_coh, max_coh), 4),
+                d_im=round(random.uniform(-max_coh, max_coh), 4),
+                e_re=round(random.uniform(-max_coh, max_coh), 4),
+                e_im=round(random.uniform(-max_coh, max_coh), 4),
+                f_re=round(random.uniform(-max_coh, max_coh), 4),
+                f_im=round(random.uniform(-max_coh, max_coh), 4)
+            )
         st.rerun()
 
 with col2:
     if st.button("Calculate"):
         st.rerun()
+
+# --- Load from URL ---
+qp = st.experimental_get_query_params()
+if mode == "Classical" and "lam_class" in qp:
+    lambda_input = float(qp["lam_class"][0])
+    st.experimental_set_query_params()
+elif mode == "Quantum" and "lam_quant" in qp:
+    lambda_input = float(qp["lam_quant"][0])
+    st.experimental_set_query_params()
 
 # --- Channel Description ---
 st.markdown(f"### {channel_name}")
@@ -176,11 +188,11 @@ st.write(channel['desc'])
 # --- Calculation ---
 try:
     if mode == "Classical":
-        lam = st.session_state.get('lam_class', 0.5)
+        lam = lambda_input
         rate = channel['achievable'](lam, param)
         cap = channel.get('capacity', lambda x: 0)(param)
     else:
-        lam = st.session_state.get('lam_quant', 0.5)
+        lam = lambda_input
         if channel_name == "Bit-flip":
             rate = channel['achievable'](rho1, rho2, lam, param)
             cap = max([channel['achievable'](rho1, rho2, ll, param) for ll in np.linspace(0,1,20)])
